@@ -17,9 +17,9 @@ Telegram bot to track monthly expenses
 
 ## Tech Stack
 
-Python Telegram Bot API
-Google Cloud for Hosting
-Firebase Firestore DB
+- Python Telegram Bot API
+- Google Cloud for Hosting
+- Firebase Firestore DB
 
 ## Disclaimer/Privacy Policy
 
