@@ -457,7 +457,7 @@ def expense_report(
             ]
         )
 
-        for item in expenses[:8]:
+        for item in expenses:
             created = item.get("created_at")
             date_label = (
                 created.astimezone(TIMEZONE).strftime(
@@ -483,11 +483,6 @@ def expense_report(
                 f"{escape(label)} · "
                 f"{money(int(item['amount_cents']))}"
                 f"{comment_text}"
-            )
-
-        if len(expenses) > 8:
-            lines.append(
-                f"…and {len(expenses) - 8} more"
             )
 
     remaining = budget - total
