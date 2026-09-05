@@ -1,51 +1,35 @@
 # Telegram Expense Tracker Bot
 
-A multi-user Telegram expense tracker backed by Firebase Firestore.
+Telegram bot to track monthly expenses
 
 ## Features
 
-- First-time monthly budget setup
-- On-screen numeric keypad for entering money
-- Categorized expenses
-- Remaining-budget calculation after every expense
-- Neat current-month category summary and recent transactions
+- Set monthly budget
+- Add expense with categories and comments
+- Show remaining budget for month
+- Current month category summary in a graph and recent transactions
 - Reports for the previous 12 months
-- Budget changes effective from the current month onward
-- Separate Firestore records for every Telegram user
+- Monthly budget can be reset and updated
 
-## Setup
+## How to use
 
-1. Create a Telegram bot with [BotFather](https://t.me/BotFather) and copy its token.
-2. Create a Firebase project and enable **Cloud Firestore**.
-3. In Firebase Console, open **Project settings → Service accounts → Generate new private key**.
-4. Copy the matching values from that JSON file into `firebase_config.py`. For `private_key`, preserve the `\n` sequences/newlines exactly.
-5. Copy `.env.example` to `.env`, then fill in `TELEGRAM_BOT_TOKEN`.
-6. Install and run:
+[@nicexpensetrackerbot](https://t.me/nicexpensetrackerbot) on Telegram
 
-```powershell
-python -m venv .venv
-.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-python bot.py
-```
+## Tech Stack
 
-For macOS or Linux, activate the environment with `source .venv/bin/activate`.
+Python Telegram Bot API
+Google Cloud for Hosting
+Firebase Firestore DB
 
-## Firestore structure
+## Disclaimer/Privacy Policy
 
-```text
-users/{telegram_user_id}
-  telegram_user_id, first_name, username, last_seen_at
-  budget_changes/{YYYY-MM}
-    effective_month, amount_cents, updated_at
-  expenses/{automatic_id}
-    amount_cents, category, month, created_at
-```
-
-Money is stored as integer cents. Budget changes are selected by their effective month, so old monthly reports retain their original budget while a change made now applies to this month and future months.
-
-## Notes
-
-- The bot uses long polling, so no public webhook server is required.
-- Firestore access happens through the Firebase Admin SDK. Do not commit `firebase_config.py` after adding real credentials.
-- Telegram cannot switch a phone's native keyboard to numeric input. The bot therefore supplies an inline numeric keypad, which works consistently across Telegram clients.
+When you use this bot, the following information will be stored:
+- your Telegram user ID
+- First name and username
+- Monthly budgets
+- Expense amounts, categories, dates, and comments
+- Usage timestamps
+The information is used only to provide the bot’s expense-tracking, reporting, chart, deletion, and export features.   
+Data is stored in Google Firebase Cloud Firestore. Messages are also processed through Telegram. These providers may process data according to their respective terms and privacy policies.    
+The developer can access stored information for operation, maintenance, security, and troubleshooting. Your expense information is not end-to-end encrypted. Do not enter passwords, bank-account numbers, card details, authentication codes, or other highly sensitive information in expense comments.   
+Data is not sold or used for advertising and not intentionally shared with other users.   
