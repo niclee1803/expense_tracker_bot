@@ -9,7 +9,7 @@ Telegram bot to track monthly expenses
 - Show remaining budget for month
 - Current month category summary in a graph and recent transactions
 - Reports for the previous 12 months
-- Monthly budget can be reset and updated
+- Retrieve past data in Excel file
 
 ## How to use
 
