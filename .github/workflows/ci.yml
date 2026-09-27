@@ -46,4 +46,4 @@ jobs:
           chmod 600 ~/.ssh/known_hosts
           ssh -i ~/.ssh/id_ed25519 -o BatchMode=yes -o StrictHostKeyChecking=yes \
             "$GCE_USERNAME@$GCE_HOST" \
-            'cd /home/niclee1803/expense_tracker_bot && git pull --ff-only origin main && make deploy'
+            'cd ~/expense_tracker_bot && git pull --ff-only origin main && make deploy'
