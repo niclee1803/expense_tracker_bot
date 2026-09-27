@@ -69,7 +69,8 @@ async def begin_amount_input(
 
     if mode == "expense":
         prompt = (
-            "Enter the expense amount followed by an optional comment.\n\n"
+            "Enter the expense amount followed by an optional comment.\n"
+            "Use /cancel to cancel.\n\n"
             "Examples:\n"
             "<code>25.60</code>\n"
             "<code>25.60 mcdonalds lunch</code>"
