@@ -158,7 +158,14 @@ def expense_range_chart(user_id: int, month_count: int) -> BytesIO:
 
 def _to_png(fig, filename: str) -> BytesIO:
     image = BytesIO()
-    fig.savefig(image, format="png", dpi=160, facecolor=fig.get_facecolor())
+    fig.savefig(
+        image,
+        format="png",
+        dpi=160,
+        facecolor=fig.get_facecolor(),
+        bbox_inches="tight",
+        pad_inches=0.2,
+    )
     plt.close(fig)
     image.seek(0)
     image.name = filename
