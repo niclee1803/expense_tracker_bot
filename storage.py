@@ -7,13 +7,15 @@ db = None
 
 
 def init_firestore():
-    global db
+    global db  # pylint: disable=global-statement
     required = ("project_id", "private_key", "client_email")
     if not all(FIREBASE_CONFIG.get(key) for key in required):
         raise RuntimeError(
             "Firebase is not configured. Fill in firebase_config.py before starting the bot."
         )
-    if not firebase_admin._apps:
+    try:
+        firebase_admin.get_app()
+    except ValueError:
         firebase_admin.initialize_app(credentials.Certificate(FIREBASE_CONFIG))
     db = firestore.client()
     return db

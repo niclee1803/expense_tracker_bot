@@ -6,7 +6,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-from settings import CATEGORIES, CATEGORY_COLORS, CURRENCY, category_name
+from settings import CATEGORY_COLORS, CURRENCY, category_name
 from storage import get_budget_cents, get_expenses
 from utils import money, month_key, month_title, now_local, previous_months
 

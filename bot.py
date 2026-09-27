@@ -105,7 +105,7 @@ async def start(
             "telegram_user_id": telegram_user.id,
             "first_name": telegram_user.first_name or "",
             "username": telegram_user.username or "",
-            "last_seen_at": firestore.SERVER_TIMESTAMP,
+            "last_seen_at": firestore.SERVER_TIMESTAMP,  # pylint: disable=no-member
         },
         merge=True,
     )
@@ -192,7 +192,7 @@ async def handle_amount(
             {
                 "effective_month": current_month,
                 "amount_cents": cents,
-                "updated_at": firestore.SERVER_TIMESTAMP,
+                "updated_at": firestore.SERVER_TIMESTAMP,  # pylint: disable=no-member
             }
         )
 
@@ -348,7 +348,7 @@ async def category_selected(
 
 async def show_remaining(
     update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
+    _context: ContextTypes.DEFAULT_TYPE,
 ):
     current_month = month_key(now_local())
     budget = (
@@ -509,7 +509,7 @@ def expense_report(
 
 async def show_current_expenses(
     update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
+    _context: ContextTypes.DEFAULT_TYPE,
 ):
     target_month = month_key(now_local())
     chart = expense_chart(
@@ -533,7 +533,7 @@ async def show_current_expenses(
 
 async def show_past_month_menu(
     update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
+    _context: ContextTypes.DEFAULT_TYPE,
 ):
     months = previous_months(12)
 
@@ -575,7 +575,7 @@ async def show_past_month_menu(
 
 async def past_period_selected(
     update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
+    _context: ContextTypes.DEFAULT_TYPE,
 ):
     query = update.callback_query
     await query.answer()
@@ -616,7 +616,7 @@ async def past_period_selected(
 
 async def past_month_selected(
     update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
+    _context: ContextTypes.DEFAULT_TYPE,
 ):
     query = update.callback_query
     await query.answer()
@@ -652,7 +652,7 @@ async def past_month_selected(
 
 async def show_delete_expense_menu(
     update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
+    _context: ContextTypes.DEFAULT_TYPE,
 ):
     current_month = month_key(now_local())
     expenses = get_expenses(
@@ -739,7 +739,7 @@ async def show_delete_expense_menu(
 
 async def delete_expense_selected(
     update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
+    _context: ContextTypes.DEFAULT_TYPE,
 ):
     query = update.callback_query
     await query.answer()
@@ -812,7 +812,7 @@ async def delete_expense_selected(
 
 async def delete_expense_confirmed(
     update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
+    _context: ContextTypes.DEFAULT_TYPE,
 ):
     query = update.callback_query
     await query.answer()
@@ -887,7 +887,7 @@ async def delete_expense_confirmed(
 
 async def delete_expense_cancelled(
     update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
+    _context: ContextTypes.DEFAULT_TYPE,
 ):
     query = update.callback_query
     await query.answer()
@@ -904,7 +904,7 @@ async def delete_expense_cancelled(
 
 async def generate_xlsx(
     update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
+    _context: ContextTypes.DEFAULT_TYPE,
 ):
     await update.message.reply_text(
         "Generating your expense data export…"
