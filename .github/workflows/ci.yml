@@ -1,0 +1,49 @@
+name: Lint and deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13.5"
+      - name: Install dependencies
+        run: make install
+      - name: Run Pylint
+        run: |
+          printf 'FIREBASE_CONFIG = {}\n' > firebase_config.py
+          make lint
+
+  deploy:
+    if: github.event_name == 'push'
+    needs: lint
+    runs-on: ubuntu-latest
+    concurrency:
+      group: expense-tracker-production
+      cancel-in-progress: false
+    steps:
+      - name: Update VM and restart bot
+        env:
+          GCE_HOST: ${{ secrets.GCE_HOST }}
+          GCE_SSH_KEY: ${{ secrets.GCE_SSH_KEY }}
+          GCE_USERNAME: ${{ secrets.GCE_USERNAME }}
+        run: |
+          test -n "$GCE_HOST" && test -n "$GCE_SSH_KEY" && test -n "$GCE_USERNAME"
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$GCE_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$GCE_HOST" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+          ssh -i ~/.ssh/id_ed25519 -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            "$GCE_USERNAME@$GCE_HOST" \
+            'cd /home/niclee1803/expense_tracker_bot && git pull --ff-only origin main && make deploy'
