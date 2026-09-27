@@ -60,4 +60,6 @@ def get_all_expenses(user_id: int) -> list[dict]:
 
 
 def total_spent_cents(user_id: int, target_month: str) -> int:
-    return sum(int(item["amount_cents"]) for item in get_expenses(user_id, target_month))
+    query = user_ref(user_id).collection("expenses").where("month", "==", target_month)
+    results = query.sum("amount_cents", alias="spent").get()
+    return int(results[0][0].value or 0) if results else 0
