@@ -21,6 +21,15 @@ Telegram bot to track monthly expenses
 - Google Cloud for Hosting
 - Firebase Firestore DB
 
+## CI/CD Workflow
+- Pylint runs on pushes and pull requests
+- Workflow pulls the code into Google Cloud Compute Engine VM and restarts the bot's service
+- To add: unit testing
+  
+
+## Sample screenshots/videos
+to add
+    
 ## Disclaimer/Privacy Policy
 
 When you use this bot, the following information will be stored:
