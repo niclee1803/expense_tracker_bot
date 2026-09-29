@@ -372,17 +372,17 @@ async def show_remaining(
     _context: ContextTypes.DEFAULT_TYPE,
 ):
     current_month = month_key(now_local())
-    budget = (
-        get_budget_cents(
-            update.effective_user.id,
-            current_month,
-        )
-        or 0
+    loading = await update.message.reply_text(
+        "⏳ Checking remaining budget...",
+        reply_markup=MAIN_MENU,
     )
-    spent = total_spent_cents(
-        update.effective_user.id,
-        current_month,
+
+    user_id = update.effective_user.id
+    budget_cents, spent = await asyncio.gather(
+        asyncio.to_thread(get_budget_cents, user_id, current_month),
+        asyncio.to_thread(total_spent_cents, user_id, current_month),
     )
+    budget = budget_cents or 0
     remaining = budget - spent
 
     if remaining >= 0:
@@ -395,13 +395,12 @@ async def show_remaining(
             f"<b>{money(abs(remaining))}</b>"
         )
 
-    await update.message.reply_text(
+    await loading.edit_text(
         f"<b>{month_title(current_month)}</b>\n\n"
         f"Budget: {money(budget)}\n"
         f"Spent: {money(spent)}\n"
         f"{summary}",
         parse_mode=ParseMode.HTML,
-        reply_markup=MAIN_MENU,
     )
 
 
@@ -502,6 +501,9 @@ def expense_report(
                 f"{comment_text}"
             )
 
+    if limit is not None and len(expenses) > limit:
+        lines.append(f"{len(expenses) - limit} more...")
+
     remaining = budget - total
 
     lines.extend(
@@ -521,8 +523,7 @@ def expense_report(
         ]
     )
 
-    if limit is not None and len(expenses) > limit:
-        lines.append(f"{len(expenses) - limit} more...")
+    
 
     return "\n".join(lines)
 
@@ -743,9 +744,18 @@ async def past_month_selected(
         )
         return
 
-    chart = expense_chart(
-        query.from_user.id,
-        target_month,
+    await query.edit_message_text(
+        f"⏳ Loading {month_title(target_month)}..."
+    )
+
+    user_id = query.from_user.id
+    expenses, budget_cents = await asyncio.gather(
+        asyncio.to_thread(get_expenses, user_id, target_month),
+        asyncio.to_thread(get_budget_cents, user_id, target_month),
+    )
+    budget = budget_cents or 0
+    chart = await asyncio.to_thread(
+        expense_chart, user_id, target_month, expenses, budget
     )
 
     await query.message.reply_photo(
@@ -753,7 +763,7 @@ async def past_month_selected(
     )
 
     report_parts = split_expense_report(
-        expense_report(query.from_user.id, target_month)
+        expense_report(user_id, target_month, expenses, budget)
     )
     await query.edit_message_text(
         report_parts[0],
