@@ -374,7 +374,6 @@ async def show_remaining(
     current_month = month_key(now_local())
     loading = await update.message.reply_text(
         "⏳ Checking remaining budget...",
-        reply_markup=MAIN_MENU,
     )
 
     user_id = update.effective_user.id
