@@ -345,8 +345,12 @@ async def category_selected(
     except Exception:  # pylint: disable=broad-exception-caught
         logger.exception("Could not load remaining budget after expense save")
         await query.edit_message_text(
-            f"{saved_text}\n\nRemaining budget is temporarily unavailable.",
+            saved_text,
             parse_mode=ParseMode.HTML,
+        )
+        await query.message.reply_text(
+            "Remaining budget is temporarily unavailable.",
+            reply_markup=MAIN_MENU,
         )
         return
 
@@ -361,9 +365,13 @@ async def category_selected(
         remaining_text = money(remaining)
 
     await query.edit_message_text(
-        f"{saved_text}\n\n"
+        saved_text,
+        parse_mode=ParseMode.HTML,
+    )
+    await query.message.reply_text(
         f"{status} <b>{remaining_text}</b>",
         parse_mode=ParseMode.HTML,
+        reply_markup=MAIN_MENU,
     )
 
 
