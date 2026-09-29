@@ -11,9 +11,16 @@ from storage import get_budget_cents, get_expenses
 from utils import money, month_key, month_title, now_local, previous_months
 
 
-def expense_chart(user_id: int, target_month: str) -> BytesIO:
-    expenses = get_expenses(user_id, target_month)
-    budget = get_budget_cents(user_id, target_month) or 0
+def expense_chart(
+    user_id: int,
+    target_month: str,
+    expenses: list[dict] | None = None,
+    budget: int | None = None,
+) -> BytesIO:
+    if expenses is None:
+        expenses = get_expenses(user_id, target_month)
+    if budget is None:
+        budget = get_budget_cents(user_id, target_month) or 0
     by_category = defaultdict(int)
     for item in expenses:
         by_category[item.get("category", "others")] += int(item["amount_cents"])

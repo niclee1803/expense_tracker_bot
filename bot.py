@@ -12,6 +12,7 @@ from telegram import (
     Update,
 )
 from telegram.constants import ParseMode
+from telegram.error import TelegramError
 from telegram.ext import (
     Application,
     CallbackQueryHandler,
@@ -80,7 +81,8 @@ async def begin_amount_input(
     else:
         prompt = (
             "Enter your monthly budget as a number "
-            "(for example, <code>1000.00</code>):"
+            "(for example, <code>1000.00</code>).\n"
+            "Use /cancel to cancel."
         )
         placeholder = "Enter budget, e.g. 1000.00"
 
@@ -318,10 +320,6 @@ async def category_selected(
             "Could not confirm whether this expense was saved. "
             "Check recent transactions before trying again."
         )
-        await query.message.reply_text(
-            "Choose an option:",
-            reply_markup=MAIN_MENU,
-        )
         return
 
     comment_line = (
@@ -350,10 +348,6 @@ async def category_selected(
             f"{saved_text}\n\nRemaining budget is temporarily unavailable.",
             parse_mode=ParseMode.HTML,
         )
-        await query.message.reply_text(
-            "Choose an option:",
-            reply_markup=MAIN_MENU,
-        )
         return
 
     budget = budget_cents or 0
@@ -370,11 +364,6 @@ async def category_selected(
         f"{saved_text}\n\n"
         f"{status} <b>{remaining_text}</b>",
         parse_mode=ParseMode.HTML,
-    )
-
-    await query.message.reply_text(
-        "Choose an option:",
-        reply_markup=MAIN_MENU,
     )
 
 
@@ -419,18 +408,14 @@ async def show_remaining(
 def expense_report(
     user_id: int,
     target_month: str,
+    expenses: list[dict] | None = None,
+    budget: int | None = None,
+    limit: int | None = None,
 ) -> str:
-    expenses = get_expenses(
-        user_id,
-        target_month,
-    )
-    budget = (
-        get_budget_cents(
-            user_id,
-            target_month,
-        )
-        or 0
-    )
+    if expenses is None:
+        expenses = get_expenses(user_id, target_month)
+    if budget is None:
+        budget = get_budget_cents(user_id, target_month) or 0
     total = sum(
         int(item["amount_cents"])
         for item in expenses
@@ -489,7 +474,7 @@ def expense_report(
             ]
         )
 
-        for item in expenses:
+        for item in expenses[:limit] if limit is not None else expenses:
             created = item.get("created_at")
             date_label = (
                 created.astimezone(TIMEZONE).strftime(
@@ -536,7 +521,30 @@ def expense_report(
         ]
     )
 
+    if limit is not None and len(expenses) > limit:
+        lines.append(f"{len(expenses) - limit} more...")
+
     return "\n".join(lines)
+
+
+def split_expense_report(report: str) -> list[str]:
+    """Split an HTML report between lines before Telegram's text limit."""
+    parts = []
+    current = ""
+
+    for line in report.split("\n"):
+        next_part = f"{current}\n{line}" if current else line
+        length = len(next_part.encode("utf-16-le")) // 2
+        if current and length > 3500:
+            parts.append(current)
+            current = line
+        else:
+            current = next_part
+
+    if current:
+        parts.append(current)
+
+    return parts
 
 
 async def show_current_expenses(
@@ -544,23 +552,78 @@ async def show_current_expenses(
     _context: ContextTypes.DEFAULT_TYPE,
 ):
     target_month = month_key(now_local())
-    chart = expense_chart(
-        update.effective_user.id,
-        target_month,
+    user_id = update.effective_user.id
+    loading = await update.message.reply_text(
+        "⏳ Loading this month's budget..."
     )
 
-    await update.message.reply_photo(
-        photo=chart
+    try:
+        expenses, budget_cents = await asyncio.gather(
+            asyncio.to_thread(get_expenses, user_id, target_month),
+            asyncio.to_thread(get_budget_cents, user_id, target_month),
+        )
+        budget = budget_cents or 0
+        chart = await asyncio.to_thread(
+            expense_chart, user_id, target_month, expenses, budget
+        )
+        report_parts = split_expense_report(
+            expense_report(user_id, target_month, expenses, budget, limit=10)
+        )
+
+        await update.message.reply_photo(
+            photo=chart,
+            reply_markup=MAIN_MENU,
+        )
+
+        for index, part in enumerate(report_parts):
+            show_all_button = (
+                InlineKeyboardMarkup([[InlineKeyboardButton(
+                    "Show all",
+                    callback_data=f"show_all:{target_month}",
+                )]])
+                if len(expenses) > 10 and index == len(report_parts) - 1
+                else None
+            )
+            await update.message.reply_text(
+                part,
+                parse_mode=ParseMode.HTML,
+                reply_markup=show_all_button,
+            )
+    finally:
+        try:
+            await loading.delete()
+        except TelegramError:
+            logger.warning("Could not remove monthly report loading message")
+
+
+async def show_all_expenses(
+    update: Update,
+    _context: ContextTypes.DEFAULT_TYPE,
+):
+    query = update.callback_query
+    await query.answer()
+
+    target_month = query.data.removeprefix("show_all:")
+    await query.edit_message_text("⏳ Loading all expenses...")
+
+    user_id = query.from_user.id
+    expenses, budget_cents = await asyncio.gather(
+        asyncio.to_thread(get_expenses, user_id, target_month),
+        asyncio.to_thread(get_budget_cents, user_id, target_month),
+    )
+    report_parts = split_expense_report(
+        expense_report(user_id, target_month, expenses, budget_cents or 0)
     )
 
-    await update.message.reply_text(
-        expense_report(
-            update.effective_user.id,
-            target_month,
-        ),
+    await query.edit_message_text(
+        report_parts[0],
         parse_mode=ParseMode.HTML,
-        reply_markup=MAIN_MENU,
     )
+    for part in report_parts[1:]:
+        await query.message.reply_text(
+            part,
+            parse_mode=ParseMode.HTML,
+        )
 
 
 async def show_past_month_menu(
@@ -599,10 +662,26 @@ async def show_past_month_menu(
             ]
         )
 
+    rows.append([
+        InlineKeyboardButton(
+            "Cancel",
+            callback_data="past_cancel",
+        )
+    ])
+
     await update.message.reply_text(
         "Select a period or an individual month:",
         reply_markup=InlineKeyboardMarkup(rows),
     )
+
+
+async def past_month_cancelled(
+    update: Update,
+    _context: ContextTypes.DEFAULT_TYPE,
+):
+    query = update.callback_query
+    await query.answer()
+    await query.edit_message_text("Past months cancelled.")
 
 
 async def past_period_selected(
@@ -673,13 +752,19 @@ async def past_month_selected(
         photo=chart
     )
 
+    report_parts = split_expense_report(
+        expense_report(query.from_user.id, target_month)
+    )
     await query.edit_message_text(
-        expense_report(
-            query.from_user.id,
-            target_month,
-        ),
+        report_parts[0],
         parse_mode=ParseMode.HTML,
     )
+
+    for part in report_parts[1:]:
+        await query.message.reply_text(
+            part,
+            parse_mode=ParseMode.HTML,
+        )
 
 
 async def show_delete_expense_menu(
@@ -1102,6 +1187,18 @@ def main():
         CallbackQueryHandler(
             category_selected,
             pattern=r"^category:",
+        )
+    )
+    application.add_handler(
+        CallbackQueryHandler(
+            show_all_expenses,
+            pattern=r"^show_all:\d{4}-\d{2}$",
+        )
+    )
+    application.add_handler(
+        CallbackQueryHandler(
+            past_month_cancelled,
+            pattern=r"^past_cancel$",
         )
     )
     application.add_handler(
