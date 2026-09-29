@@ -687,7 +687,8 @@ async def show_delete_expense_menu(
     _context: ContextTypes.DEFAULT_TYPE,
 ):
     current_month = month_key(now_local())
-    expenses = get_expenses(
+    expenses = await asyncio.to_thread(
+        get_expenses,
         update.effective_user.id,
         current_month,
     )
@@ -784,7 +785,7 @@ async def delete_expense_selected(
         .collection("expenses")
         .document(expense_id)
     )
-    snapshot = expense_ref.get()
+    snapshot = await asyncio.to_thread(expense_ref.get)
 
     if not snapshot.exists:
         await query.edit_message_text(
@@ -857,7 +858,7 @@ async def delete_expense_confirmed(
         .collection("expenses")
         .document(expense_id)
     )
-    snapshot = expense_ref.get()
+    snapshot = await asyncio.to_thread(expense_ref.get)
 
     if not snapshot.exists:
         await query.edit_message_text(
@@ -878,19 +879,23 @@ async def delete_expense_confirmed(
     deleted_amount = int(
         expense["amount_cents"]
     )
-    expense_ref.delete()
+    await query.edit_message_text("⏳ Deleting expense...")
+    await asyncio.to_thread(expense_ref.delete)
 
-    budget = (
-        get_budget_cents(
-            query.from_user.id,
-            current_month,
-        )
-        or 0
+    deleted_text = (
+        f"✅ Deleted the <b>{money(deleted_amount)}</b> expense."
     )
-    spent = total_spent_cents(
-        query.from_user.id,
-        current_month,
+    await query.edit_message_text(
+        f"{deleted_text}\n\nChecking remaining budget...",
+        parse_mode=ParseMode.HTML,
     )
+
+    user_id = query.from_user.id
+    budget_cents, spent = await asyncio.gather(
+        asyncio.to_thread(get_budget_cents, user_id, current_month),
+        asyncio.to_thread(total_spent_cents, user_id, current_month),
+    )
+    budget = budget_cents or 0
     remaining = budget - spent
 
     remaining_line = (
@@ -904,9 +909,7 @@ async def delete_expense_confirmed(
     )
 
     await query.edit_message_text(
-        f"✅ Deleted the "
-        f"<b>{money(deleted_amount)}</b> "
-        f"expense.\n\n"
+        f"{deleted_text}\n\n"
         f"{remaining_line}",
         parse_mode=ParseMode.HTML,
     )
