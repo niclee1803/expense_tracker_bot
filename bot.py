@@ -1011,13 +1011,13 @@ async def delete_expense_confirmed(
     )
 
     await query.edit_message_text(
-        f"{deleted_text}\n\n"
-        f"{remaining_line}",
+        deleted_text,
         parse_mode=ParseMode.HTML,
     )
 
     await query.message.reply_text(
-        "Choose an option:",
+        remaining_line,
+        parse_mode=ParseMode.HTML,
         reply_markup=MAIN_MENU,
     )
 
@@ -1031,11 +1031,6 @@ async def delete_expense_cancelled(
 
     await query.edit_message_text(
         "Deletion cancelled."
-    )
-
-    await query.message.reply_text(
-        "Choose an option:",
-        reply_markup=MAIN_MENU,
     )
 
 
