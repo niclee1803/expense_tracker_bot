@@ -22,8 +22,8 @@ Telegram bot to track monthly expenses
 - Firebase Firestore DB
 
 ## CI/CD Workflow
-- Pylint runs on pushes and pull requests
-- Workflow pulls the code into Google Cloud Compute Engine VM and restarts the bot's service
+- Pylint runs on pushes and pull requests to main branch
+- Github Actions workflow SSH into Google Cloud VM to install dependencies, pull code, and restart service.
 - To add: unit testing
   
 
