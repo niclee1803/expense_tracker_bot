@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from collections import defaultdict
 from decimal import InvalidOperation
@@ -303,21 +304,59 @@ async def category_selected(
     if comment:
         expense_data["comment"] = comment
 
-    user_ref(query.from_user.id).collection(
-        "expenses"
-    ).add(expense_data)
+    await query.edit_message_text("⏳ Saving expense...")
 
-    budget = (
-        get_budget_cents(
-            query.from_user.id,
-            current_month,
+    user_id = query.from_user.id
+    try:
+        await asyncio.to_thread(
+            user_ref(user_id).collection("expenses").add,
+            expense_data,
         )
-        or 0
+    except Exception:  # pylint: disable=broad-exception-caught
+        logger.exception("Could not confirm expense save")
+        await query.edit_message_text(
+            "Could not confirm whether this expense was saved. "
+            "Check recent transactions before trying again."
+        )
+        await query.message.reply_text(
+            "Choose an option:",
+            reply_markup=MAIN_MENU,
+        )
+        return
+
+    comment_line = (
+        f"\nComment: {escape(comment)}"
+        if comment
+        else ""
     )
-    spent = total_spent_cents(
-        query.from_user.id,
-        current_month,
+    saved_text = (
+        f"✅ Added <b>{money(cents)}</b> to "
+        f"{escape(CATEGORIES[category])}."
+        f"{comment_line}"
     )
+    await query.edit_message_text(
+        f"{saved_text}\n\nChecking remaining budget...",
+        parse_mode=ParseMode.HTML,
+    )
+
+    try:
+        budget_cents, spent = await asyncio.gather(
+            asyncio.to_thread(get_budget_cents, user_id, current_month),
+            asyncio.to_thread(total_spent_cents, user_id, current_month),
+        )
+    except Exception:  # pylint: disable=broad-exception-caught
+        logger.exception("Could not load remaining budget after expense save")
+        await query.edit_message_text(
+            f"{saved_text}\n\nRemaining budget is temporarily unavailable.",
+            parse_mode=ParseMode.HTML,
+        )
+        await query.message.reply_text(
+            "Choose an option:",
+            reply_markup=MAIN_MENU,
+        )
+        return
+
+    budget = budget_cents or 0
     remaining = budget - spent
 
     if remaining < 0:
@@ -327,16 +366,8 @@ async def category_selected(
         status = "💰 Remaining budget:"
         remaining_text = money(remaining)
 
-    comment_line = (
-        f"\nComment: {escape(comment)}"
-        if comment
-        else ""
-    )
-
     await query.edit_message_text(
-        f"✅ Added <b>{money(cents)}</b> to "
-        f"{escape(CATEGORIES[category])}."
-        f"{comment_line}\n\n"
+        f"{saved_text}\n\n"
         f"{status} <b>{remaining_text}</b>",
         parse_mode=ParseMode.HTML,
     )
