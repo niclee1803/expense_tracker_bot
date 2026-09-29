@@ -38,3 +38,9 @@ When you use this bot, the following information will be stored:
 - Monthly budgets
 - Expense amounts, categories, dates, and comments
 - Usage timestamps
+  
+Your data is used only to operate the Bot and provide features such as expense tracking, summaries, and reports.
+  
+Data is stored using Firebase Firestore and is not sold or used for advertising.
+  
+The Bot uses third-party services including Telegram, Firebase, and Google Cloud, which may process data according to their respective privacy policies.
