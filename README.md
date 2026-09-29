@@ -23,7 +23,7 @@ Telegram bot to track monthly expenses
 
 ## CI/CD Workflow
 - Pylint runs on pushes and pull requests to main branch
-- Github Actions workflow SSH into Google Cloud VM to install dependencies, pull code, and restart service.
+- Github Actions workflow: SSH into Google Cloud VM to install dependencies, pull code, and restart service.
 - To add: unit testing
   
 
